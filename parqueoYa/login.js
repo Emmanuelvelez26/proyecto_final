@@ -62,18 +62,40 @@ app.post('/auth', function(request, response) {
             if (error) throw error;
             if (results.length > 0) {
                 request.session.loggedin = true;
-                // Store the user's id in the session
                 request.session.userId = results[0].id;
+                request.session.username = username;
                 response.redirect('/home');
             } else {
-                response.send('Incorrect Username and/or Password!');
+                // Enviar el mensaje 'Usuario y/o Contraseña Incorrecta' si el nombre de usuario o la contraseña son incorrectos
+                response.send('Usuario y/o Contraseña Incorrecta');
             }			
             response.end();
         });
     } else {
-        response.send('Please enter Username and Password!');
+        response.send('Por favor ingresa Usuario y Contraseña!');
         response.end();
     }
+});
+
+// http://localhost:3000/role
+app.get('/role', function(request, response) {
+    // Get the username from the query parameters
+    let username = request.query.username;
+    // Execute SQL query to get the user's role
+    connection.query('SELECT role FROM accounts WHERE username = ?', [username], function(error, results, fields) {
+        if (error) throw error;
+        // If the query returned a result
+        if (results.length > 0) {
+            // Send the user's role as the response
+            console.log(results[0]);
+            response.send(results[0].role);
+            response.end();
+        } else {
+            // If the user's role was not found, send an error message
+            response.send('User role not found');
+            response.end();
+        }
+    });
 });
 
 // http://localhost:3000/register
@@ -82,10 +104,11 @@ app.post('/register', function(request, response) {
     let username = request.body.username;
     let password = request.body.password;
     let email = request.body.email;
+    let role = request.body.role;
     // Ensure the input fields exists and are not empty
-    if (username && password && email) {
+    if (username && password && email && role) {
         // Execute SQL query that'll insert the new account into the database
-        connection.query('INSERT INTO accounts (username, password, email) VALUES (?, ?, ?)', [username, password, email], function(error, results, fields) {
+        connection.query('INSERT INTO accounts (username, password, email, role) VALUES (?, ?, ?, ?)', [username, password, email, role], function(error, results, fields) {
             // If there is an issue with the query, output the error
             if (error) throw error;
             // If the account was successfully created
@@ -206,15 +229,15 @@ app.post('/Salida', function(request, response) {
     }
 });
 app.post('/updateSalida', function(request, response) {
-    // Get the vehicle's id from the request body
-    let id = request.body.id;
+    // Get the vehicle's plate from the request body
+    let placa = request.body.placa;
 
-    if (id) {
+    if (placa) {
         // Get the current date and time in the 'America/Bogota' timezone
         let salida = moment().tz('America/Bogota').format('YYYY-MM-DD HH:mm:ss');
 
         // Update the 'salida' column for the specified vehicle
-        connection.query('UPDATE vehiculos SET salida = ? WHERE id = ?', [salida, id], function(error, results, fields) {
+        connection.query('UPDATE vehiculos SET salida = ? WHERE placa = ?', [salida, placa], function(error, results, fields) {
             if (error) throw error;
             // Check if the update was successful
             if (results.affectedRows > 0) {
@@ -225,23 +248,22 @@ app.post('/updateSalida', function(request, response) {
             response.end();
         });
     } else {
-        // If the vehicle's id is missing, send an error message
-        response.send('Por favor ingresa el id del vehiculo!');
+        // If the vehicle's plate is missing, send an error message
+        response.send('Por favor ingresa la placa del vehiculo!');
         response.end();
     }
 });
 
-
 app.post('/updateEntrada', function(request, response) {
-    // Get the vehicle's id from the request body
-    let id = request.body.id;
+    // Get the vehicle's plate from the request body
+    let placa = request.body.placa;
 
-    if (id) {
+    if (placa) {
         // Get the current date and time in the 'America/Bogota' timezone
         let entrada = moment().tz('America/Bogota').format('YYYY-MM-DD HH:mm:ss');
 
         // Update the 'entrada' column for the specified vehicle
-        connection.query('UPDATE vehiculos SET entrada = ? WHERE id = ?', [entrada, id], function(error, results, fields) {
+        connection.query('UPDATE vehiculos SET entrada = ? WHERE placa = ?', [entrada, placa], function(error, results, fields) {
             if (error) throw error;
             // Check if the update was successful
             if (results.affectedRows > 0) {
@@ -252,8 +274,8 @@ app.post('/updateEntrada', function(request, response) {
             response.end();
         });
     } else {
-        // If the vehicle's id is missing, send an error message
-        response.send('Por favor ingresa el id del vehiculo!');
+        // If the vehicle's plate is missing, send an error message
+        response.send('Por favor ingresa la placa del vehiculo!');
         response.end();
     }
 });
