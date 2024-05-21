@@ -4,20 +4,36 @@ const session = require('express-session');
 const path = require('path');
 const cors = require('cors')
 const moment = require('moment-timezone');
+const MySQLStore = require('express-mysql-session')(session);
 
 const connection = mysql.createConnection({
 	host     : 'localhost',
-	user     : 'admin',
+	user     : 'root',
 	password : '',
-	database : 'database'
+    port: 3308,
+	database : 'parqueoya'
 });
-
+const options = {
+    host: 'localhost',
+    port: 3308,
+    user: 'root',
+    password: '',
+    database: 'parqueoya'
+};
 const app = express();
 
+const sessionStore = new MySQLStore(options);
+app.use(cors({
+    origin: 'http://localhost:3002', // Asegúrate de cambiar esto a tu origen
+    credentials: true
+}));
+
 app.use(session({
-	secret: 'secret',
-	resave: true,
-	saveUninitialized: true
+    key: 'session_cookie_name',
+    secret: 'session_cookie_secret',
+    store: sessionStore,
+    resave: false,
+    saveUninitialized: false
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -27,6 +43,14 @@ app.use(cors());
 app.use(cors({
 	origin: 'http://localhost:3002' // Sólo permitir solicitudes de este origen
 }));
+
+app.get('/session-info', (req, res) => {
+    if (req.session.username) {
+        res.json(req.session.username);
+    } else {
+        res.status(401).send('Not logged in');
+    }
+});
 
 // http://localhost:3000/users
 app.get('/users', function(request, response) {
@@ -64,6 +88,7 @@ app.post('/auth', function(request, response) {
                 request.session.loggedin = true;
                 request.session.userId = results[0].id;
                 request.session.username = username;
+                request.session.rol = results[0].role; // Almacenar el rol en la sesión
                 response.redirect('/home');
             } else {
                 // Enviar el mensaje 'Usuario y/o Contraseña Incorrecta' si el nombre de usuario o la contraseña son incorrectos
@@ -127,17 +152,16 @@ app.post('/register', function(request, response) {
 
 // http://localhost:3000/home
 app.get('/home', function(request, response) {
-	// If the user is loggedin
-	if (request.session.loggedin) {
-		// Output username
-		response.send('Te has logueado satisfactoriamente:, ' + request.session.username + '!');
-	} else {
-		// Not logged in
-		response.send('¡Inicia sesión para ver esta página!');
-	}
-	response.end();
+    // If the user is loggedin
+    if (request.session.loggedin) {
+        // Output username and role
+        response.json({  username: request.session.username, role: request.session.rol });
+    } else {
+        // Not logged in
+        response.json({ message: '¡Inicia sesión para ver esta página!', username: '', role: '' });
+    }
+    response.end();
 });
-
 // http://localhost:3000/logout
 app.get('/logout', function(request, response) {
     if (request.session) {
